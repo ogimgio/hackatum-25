@@ -1,6 +1,6 @@
 # SiXT Hackathon Project – Automated Sales Agent for Car Rental Upselling
 
-## 🚗 Overview
+## Overview
 
 This project was built for the SiXT Hackathon with the goal of automating the sales agent responsible for concluding the car rental process. Specifically, we focus on mimicking the human approach to upselling/ upgrading vehicles and offering protection insurance options.
 
@@ -8,7 +8,7 @@ Our solution simulates a natural and persuasive interaction similar to what a cu
 
 ---
 
-## 🧩 Core Concept
+## Core Concept
 
 Our upselling strategy is based on three main pillars:
 
@@ -29,7 +29,7 @@ The avatar adapts its wording and sales pitch depending on who the customer is a
 
 ---
 
-## 🛠️ System Workflow
+## System Workflow
 
 ### 1. **Booking Phase (Frontend UI)**
 
@@ -72,7 +72,7 @@ The Python backend is a lightweight API that handles all business logic and data
     - **Data Filtering**: Contains the core logic (`filter_cars` and `select_protection`) to determine the best **upsell car option** and the most suitable **protection package** based on the customer's budget and preferences.
     - **API Endpoint**: The `/api/booking/offer` endpoint takes the comprehensive `BookingRequest` and returns the two best car offers (upsell and normal) and the tailored protection package. This information is used by the frontend agent to form the personalized sales pitch.
 
-## 🎭 Key‑Collection Day Flow (Avatar Interaction)
+## Key‑Collection Day Flow (Avatar Interaction)
 
 At the rental pickup location, the customer enters their `booking_id`. This triggers the upselling process powered by a D‑ID live avatar.
 
