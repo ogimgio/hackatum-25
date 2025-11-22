@@ -49,29 +49,28 @@ Instead of immediately showing car models, we first ask the user a set of guidin
 
 After submitting this information, the user sees a list of suggested vehicles and selects one. The main goal of this first page is *not* recommendation accuracy, but collecting useful context for the upselling model.
 
-A `booking_id` is generated and stored in our backend along with all customer inputs.
+### Structure
 
----
+The user-facing application manages the three-step flow:
+
+- **`BookingForm.tsx`**: A component that gathers initial **Client Data** (Name, Age), **Reservation Data** (Location), **Preferences** (Passengers, Doors, Luggage, Budget, Transmission), and **Add-ons** (GPS, Baby Seat, etc.). This data is crucial for profiling.
+- **`CarSelection.tsx`**: Displays the initially selected car and available alternatives based on the pre-submitted preferences. Once a preferred car is selected here, the system moves to the final step.
+- **`WhisperDIDAgent.tsx`**: The core component for the live interaction. It renders the **D-ID live avatar** and handles the user's audio input using OpenAI's **Whisper** for transcription.
+- **`app/api/call-agent/route.ts`**: A Next.js API route that handles the **escalation to a real human agent**. It uses **Twilio** to initiate a phone call, informing the human agent of the client's name and the reason for the escalation.
+- **`backendLogic.ts`**: The client-side business logic driver.
+    - **`getInitialOffers`**: Responsible for taking the `BookingContext` and calling the external FastAPI endpoint to fetch the personalized upsell and protection offers.
+    - **`processUserResponse`**: The core AI logic. It orchestrates the flow by calling **OpenAI GPT-4o** to classify the user's intent, and based on that, determines the **next conversational state** (`FlowState`) and the virtual agent's **next line of dialogue**.
 
 ### 2. **Backend (FastAPI Server)**
 
-The backend manages reservation data and supports the avatar interaction.
+The Python backend is a lightweight API that handles all business logic and data processing.
 
-#### **Key Endpoints**
-
-* **`sendReservation(name, age, car, budget, ...)`**
-
-  * Stores booking information in a pandas DataFrame (`booking_infos`)
-  * Generates and returns a unique `booking_id`
-
-* **`completeReservation(booking_id)`**
-
-  * Fetches the stored user information
-  * Determines the upsell vehicle option
-  * Determines the most suitable insurance protection offer
-  * Generates a personalised conversational script for the avatar interaction
-
----
+- **`utils.py`**: A helper module responsible for interacting with external SiXT APIs (`hackatum25.sixt.io`).
+    - It fetches raw vehicle/protection data.
+    - It **simplifies** this raw data into a more usable format (e.g., `simplify_vehicles`, `simplify_protections`), which is then saved locally to avoid repetitive API calls.
+- **`server.py`**: The main FastAPI application.
+    - **Data Filtering**: Contains the core logic (`filter_cars` and `select_protection`) to determine the best **upsell car option** and the most suitable **protection package** based on the customer's budget and preferences.
+    - **API Endpoint**: The `/api/booking/offer` endpoint takes the comprehensive `BookingRequest` and returns the two best car offers (upsell and normal) and the tailored protection package. This information is used by the frontend agent to form the personalized sales pitch.
 
 ## 🎭 Key‑Collection Day Flow (Avatar Interaction)
 
@@ -111,26 +110,3 @@ Customer responses:
 * **Yes** → "Fantastic! You can now pick up your key from the box."
 * **No** → "No problem. You can pick up your key from the box."
 * **Other / confused** → connect to real sales agent
-
----
-
-## 🧱 Summary of Components
-
-* **Frontend**: Two‑step booking UI + key retrieval page
-* **Backend**: FastAPI storing customer data and generating personalised scripts
-* **Avatar Layer**: D‑ID live interactive agent delivering the upsell pitch
-
----
-
-## 🚀 Future Improvements
-
-* Better car‑matching models for the initial booking page
-* More dynamic dialog management (LLM‑driven branching)
-* Real‑time sentiment detection
-* Adaptive voice tone and gesture selection
-
----
-
-## 📂 Repository Structure
-
-*(Fill this in once your repo structure is final)*
