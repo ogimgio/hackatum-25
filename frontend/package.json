@@ -9,6 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@d-id/client-sdk": "^1.1.15",
+    "@livekit/components-react": "^2.9.16",
+    "livekit-client": "^2.16.0",
+    "lucide-react": "^0.554.0",
     "next": "16.0.3",
     "react": "19.2.0",
     "react-dom": "19.2.0"
