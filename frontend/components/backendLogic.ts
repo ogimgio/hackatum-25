@@ -1,35 +1,81 @@
 import { BackendSessionData, BookingContext, FlowState } from './types';
 
-// Update the argument type to BookingContext
-export const getInitialOffers = (booking: BookingContext): BackendSessionData => {
+// --- 1. Initial Data Setup (Fetches from your FastAPI) ---
+export const getInitialOffers = async (booking: BookingContext): Promise<BackendSessionData> => {
 
-    // 1. The car they selected in the previous screen
-    const selectedCar = booking.selectedCar || {
-        id: 'vw_golf', name: 'VW Golf', price: 35, image: '', price_display: '$35', features: []
-    };
+    try {
+        // 1. Construct the payload exactly as your Python script expects
+        const payload = {
+            client: booking.client,
+            reservation: {
+                pickup_location_id: booking.reservation.pickup_location_id,
+                // We send the car the user JUST selected as the "preferred_car"
+                preferred_car: booking.selectedCar?.name || "Any"
+            },
+            preferences: booking.preferences,
+            addons: booking.addons,
+            meta: booking.meta
+        };
 
-    // 2. Define a static Upsell (BMW X5)
-    // In a real app, you would find a car 1 tier higher than selectedCar
-    const upsellCar = {
-        id: 'bmw_x5',
-        name: 'BMW X5 Series',
-        image: 'https://di-uploads-pod16.dealerinspire.com/bmwofweststlouis/uploads/2019/09/2020-BMW-X5-sDrive40i-White-Side-View.png',
-        price: 60,
-        price_display: '+$25/day', // Hardcoded delta for demo
-        features: ['Luxury', 'Heated Seats'],
-        description: `Special upgrade for ${booking.client.name}.`
-    };
+        console.log("📤 Sending to Backend:", JSON.stringify(payload, null, 2));
 
-    return {
-        upsell_car: upsellCar,
-        normal_car: selectedCar, // <--- This ensures the Agent knows what we picked
-        protection: {
-            name: 'Platinum Protection',
-            price: '+$15/day',
-            description: 'Zero excess, tire & glass coverage included.'
+        // 2. Call your FastAPI Endpoint
+        const response = await fetch('http://localhost:8000/api/booking/offer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Backend error: ${response.statusText}`);
         }
-    };
+
+        const apiData = await response.json();
+        console.log("📥 Received from Backend:", apiData);
+
+        // 3. Map the API response to your App's Data Structure
+        // Note: Your API returns 'price_delta' string directly, which is perfect for display.
+
+        return {
+            upsell_car: {
+                id: apiData.upsell_car.id,
+                name: apiData.upsell_car.name,
+                image: apiData.upsell_car.image,
+                // We set raw price to 0 because your API gives us the formatted string directly
+                price: 0,
+                price_display: apiData.upsell_car.price_delta,
+                features: ['Premium', 'Upgrade'], // Your API doesn't return features yet, so we add generic tags
+                description: apiData.upsell_car.description
+            },
+            normal_car: {
+                id: apiData.normal_car.id,
+                name: apiData.normal_car.name,
+                image: apiData.normal_car.image,
+                price: 0,
+                price_display: apiData.normal_car.price_delta, // likely "Same Price"
+                features: ['Standard', 'Selected'],
+                description: apiData.normal_car.description
+            },
+            protection: {
+                name: apiData.protection.name,
+                price: apiData.protection.price,
+                description: apiData.protection.description
+            }
+        };
+
+    } catch (error) {
+        console.error("❌ Failed to fetch offers from backend:", error);
+
+        // Fallback / Crash Protection (Optional: Return a hardcoded safe default so app doesn't break)
+        // In production you might want to throw error to show the Error Screen
+        return {
+            upsell_car: { id: 'error', name: 'Premium Upgrade', image: '', price: 0, price_display: '+$20', features: [], description: '' },
+            normal_car: { id: 'error', name: 'Your Selection', image: '', price: 0, price_display: 'Included', features: [], description: '' },
+            protection: { name: 'Full Protection', price: '+$15', description: 'Full coverage.' }
+        };
+    }
 };
+
 /// --- 2. The Logic Brain (Simulates your Python Backend) ---
 export const processUserResponse = async (
     currentState: FlowState,
@@ -87,7 +133,7 @@ export const processUserResponse = async (
             let retryScript = "I didn't quite catch that.";
 
             if (currentState === 'UPSELL_OFFER') {
-                retryScript = `I'm sorry, I didn't understand. Would you like to upgrade to the ${sessionData.upsell_car.name} for just ${sessionData.upsell_car.price_delta}?`;
+                retryScript = `I'm sorry, I didn't understand. Would you like to upgrade to the ${sessionData.upsell_car.name} for just ${sessionData.upsell_car.price_display}?`;
             } else if (currentState === 'NORMAL_OFFER') {
                 retryScript = `Sorry, was that a yes for the ${sessionData.normal_car.name}?`;
             } else if (currentState === 'PROTECTION_OFFER') {
@@ -107,7 +153,7 @@ export const processUserResponse = async (
             if (intent === 'POSITIVE') {
                 return {
                     nextState: 'PROTECTION_OFFER',
-                    agentScript: "Great choice! Now, for peace of mind, we recommend Platinum Protection. It covers everything for 15 dollars a day. Shall we add it?"
+                    agentScript: `Great choice! Now, for peace of mind, we recommend ${sessionData.protection.name}. It covers everything for ${sessionData.protection.price} dollars a day. Shall we add it?`
                 };
             }
             if (intent === 'NEGATIVE') {

@@ -1,17 +1,18 @@
 'use client';
 
-import { AlertCircle, Loader2, Mic, MicOff, Phone, Power } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, Mic, Phone, PhoneOutgoing, Power, Square } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { getInitialOffers, processUserResponse } from './backendLogic';
 import { CarDisplay } from './CarDisplay';
-import { BackendSessionData, BookingContext, FlowState } from './types'; // Import BookingContext
+import { BackendSessionData, BookingContext, FlowState } from './types';
 
 interface AgentProps {
-    bookingContext: BookingContext; // Update this type
+    bookingContext: BookingContext | null; // Changed to allow null initially
     onBack: () => void;
+    isActive: boolean; // New prop to track visibility
 }
 
-const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
+const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack, isActive }) => {
 
     // --- Config ---
     const didAgentId = process.env.NEXT_PUBLIC_DID_AGENT_ID || '';
@@ -25,6 +26,8 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [error, setError] = useState('');
+    const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'success' | 'failed'>('idle');
+    const [showSuccessScreen, setShowSuccessScreen] = useState(false);
 
     // --- Workflow State ---
     const [flowState, setFlowState] = useState<FlowState>('CONNECTING');
@@ -38,14 +41,15 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
 
-    // 1. Initialize Session Data
+    // ---------------------------------------------------------
+    // 1. CONNECT IMMEDIATELY (Runs once on App Load)
+    // ---------------------------------------------------------
     useEffect(() => {
         if (!didAgentId || !didKey || !openAIKey) {
             setError('Missing API Keys');
             return;
         }
-        const data = getInitialOffers(bookingContext);
-        setSessionData(data);
+        // We connect immediately, regardless of booking data
         connect();
 
         return () => {
@@ -53,46 +57,55 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
         };
     }, []);
 
-    // 2. Auto-Start Speaking (WITH SAFETY DELAY)
+    // ---------------------------------------------------------
+    // 2. FETCH DATA (Runs when user selects car)
+    // ---------------------------------------------------------
     useEffect(() => {
-        // Only run if: Connected AND Video Playing AND Data Loaded AND Not Spoken Yet
-        if (status === 'connected' && isVideoReady && sessionData && !hasSpokenIntro.current) {
+        const initSession = async () => {
+            // Only fetch if we have the context AND a selected car
+            if (bookingContext && bookingContext.selectedCar && !sessionData) {
+                try {
+                    const data = await getInitialOffers(bookingContext);
+                    setSessionData(data);
+                } catch (err) {
+                    console.error("Error initializing session:", err);
+                    setError("Failed to load offer data");
+                }
+            }
+        };
+        initSession();
+    }, [bookingContext]);
 
-            // 🛑 FIX: Wait 1 second for the data channel to warm up
-            const timer = setTimeout(() => {
-                hasSpokenIntro.current = true;
-                startUpsellSequence();
-            }, 1000);
-
-            return () => clearTimeout(timer);
+    // ---------------------------------------------------------
+    // 3. UNMUTE & START TALKING (Runs when Active + Connected + Data)
+    // ---------------------------------------------------------
+    useEffect(() => {
+        // If the user is now looking at the agent, unmute the video
+        if (isActive && videoRef.current) {
+            videoRef.current.muted = false;
         }
-    }, [status, isVideoReady, sessionData]);
 
-    const startUpsellSequence = async () => {
-        if (!agentRef.current || !sessionData) return;
+        // Logic to trigger the intro speech
+        if (isActive && status === 'connected' && isVideoReady && sessionData && !hasSpokenIntro.current) {
+            // Slight delay to ensure transition animation is done
 
-        console.log("🚀 Starting Upsell Sequence...");
-
-        // Update State to Show UI
-        setFlowState('UPSELL_OFFER');
-
-        // Script
-        let script = `Hi! Welcome to Sixt. You booked a ${sessionData.normal_car.name}, but for just ${sessionData.upsell_car.price_delta} more, you can drive this ${sessionData.upsell_car.name}. Would you like the upgrade?`;
-
-        // for now only put 10 characters
-        script = script.slice(0, 10);
-
-        try {
-            await agentRef.current.speak({ type: 'text', input: script });
-        } catch (e) {
-            console.error("❌ Failed to speak intro:", e);
+            hasSpokenIntro.current = true;
+            startUpsellSequence();
+            return;
         }
-    };
+    }, [isActive, status, isVideoReady, sessionData]);
+
+
+    // ---------------------------------------------------------
+    // LOGIC & HANDLERS
+    // ---------------------------------------------------------
 
     const connect = async () => {
-        setStatus('connecting');
-        setIsVideoReady(false); // Reset
+        // Prevent double connection attempts
+        if (status === 'connecting' || status === 'connected') return;
 
+        setStatus('connecting');
+        setIsVideoReady(false);
         try {
             const { createAgentManager } = await import('@d-id/client-sdk');
             agentRef.current = await createAgentManager(didAgentId, {
@@ -103,11 +116,12 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
                         streamRef.current = stream;
                         if (videoRef.current) {
                             videoRef.current.srcObject = stream;
+                            // CRITICAL: Mute initially so browser allows autoplay in background
+                            videoRef.current.muted = true;
                             videoRef.current.play().catch(e => console.log("Autoplay blocked", e));
                         }
                     },
                     onVideoStateChange: (state: string) => {
-                        // Switch between Idle Loop and WebRTC Stream
                         if (videoRef.current && agentRef.current) {
                             if (state === "STOP") {
                                 videoRef.current.srcObject = null;
@@ -126,7 +140,7 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
                         if (s === 'failed') { setStatus('disconnected'); setError('Connection failed'); }
                     }
                 },
-                streamOptions: { compatibilityMode: 'on', streamWarmup: true }
+                streamOptions: { compatibilityMode: 'on', streamWarmup: true, fluent: true }
             });
             await agentRef.current.connect();
         } catch (e: any) {
@@ -135,7 +149,59 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
         }
     };
 
-    // --- User Input Handling ---
+    const startUpsellSequence = async () => {
+        if (!agentRef.current || !sessionData || !bookingContext) return;
+        setFlowState('UPSELL_OFFER');
+
+        const script = `Hi ${bookingContext.client.name}. Unfortunately, the ${sessionData.normal_car.name} you selected is not available at the moment. 
+The good news is that for just ${sessionData.upsell_car.price_display.replace(/\+\$(\d+(?:\.\d+)?)\/day/, '$1 dollars a day')} more, you can upgrade to the ${sessionData.upsell_car.name}. 
+It feels noticeably faster and more responsive, getting you where you want in a second! You 'll love it. How does it sound?`;
+
+        console.log("Agent Intro Script:", script);
+        try {
+            await agentRef.current.speak({ type: 'text', input: script, "ssml": true, });
+        } catch (e) {
+            console.error("❌ Failed to speak intro:", e);
+        }
+    };
+
+    // --- Escalation Logic ---
+    useEffect(() => {
+        if (flowState === 'ESCALATED' && callStatus === 'idle') {
+            setCallStatus('calling');
+            setTimeout(() => { initiateTwilioCall(); }, 2000);
+        }
+    }, [flowState]);
+
+    useEffect(() => {
+        if (flowState === 'COMPLETED') {
+            const timer = setTimeout(() => { setShowSuccessScreen(true); }, 10000);
+            return () => clearTimeout(timer);
+        }
+    }, [flowState]);
+
+    const initiateTwilioCall = async () => {
+        if (!bookingContext) return;
+        try {
+            const res = await fetch('/api/call-agent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    clientName: bookingContext.client.name,
+                    reason: 'Customer requested human agent during upsell flow'
+                })
+            });
+
+            if (res.ok) {
+                setCallStatus('success');
+            } else {
+                setCallStatus('failed');
+            }
+        } catch (e) {
+            setCallStatus('failed');
+        }
+    };
+
     const toggleRecording = async () => {
         if (isRecording) {
             mediaRecorderRef.current?.stop();
@@ -162,9 +228,7 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
     const processUserAudio = async (audioBlob: Blob) => {
         if (!sessionData) return;
         setIsProcessing(true);
-
         try {
-            // 1. STT
             const formData = new FormData();
             formData.append('file', audioBlob, 'audio.webm');
             formData.append('model', 'whisper-1');
@@ -176,17 +240,12 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
             const userText = sttData.text || "";
             setTranscript(`"${userText}"`);
 
-            // 2. Logic Decision
             const result = await processUserResponse(flowState, userText, sessionData, openAIKey);
-
-            // 3. Update State & Speak
             setFlowState(result.nextState);
 
             if (agentRef.current && result.agentScript) {
-                console.log("Agent replying:", result.agentScript);
                 await agentRef.current.speak({ type: 'text', input: result.agentScript });
             }
-
         } catch (e) {
             console.error(e);
         } finally {
@@ -200,54 +259,64 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
     };
 
     return (
-        <div className="w-full max-w-5xl mx-auto animate-in fade-in duration-700">
-            <div className="bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border border-gray-800 relative h-[600px] flex flex-col">
+        <div className="w-full max-w-5xl mx-auto animate-in fade-in duration-700 font-sans">
+            <div className="bg-[#191919] rounded-3xl overflow-hidden shadow-2xl border border-gray-800 relative h-[600px] flex flex-col">
+
+                {showSuccessScreen && (
+                    <div className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center animate-in fade-in duration-500">
+                        <div className="bg-green-100 p-6 rounded-full mb-6 animate-bounce">
+                            <CheckCircle size={64} className="text-green-600" />
+                        </div>
+                        <h2 className="text-3xl font-extrabold text-[#191919] mb-2 tracking-tight">Procedure Complete</h2>
+                    </div>
+                )}
 
                 {/* Top Bar */}
                 <div className="absolute top-0 left-0 w-full p-6 z-10 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
                     <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`} />
-                        <span className="text-white font-semibold tracking-wide text-sm">SIXT VIRTUAL AGENT</span>
+                        <div className={`w-3 h-3 rounded-full ${status === 'connected' ? 'bg-[#ff5f00] animate-pulse' : 'bg-yellow-500'}`} />
+                        <span className="text-white font-bold tracking-wide text-sm italic">SIXT <span className="text-[#ff5f00] not-italic">VIRTUAL</span></span>
                     </div>
+
                     {flowState === 'ESCALATED' && (
-                        <div className="bg-red-500 text-white px-4 py-2 rounded-full flex items-center gap-2 animate-pulse">
-                            <Phone size={16} /> Connecting to Human...
+                        <div className={`px-4 py-2 rounded-full flex items-center gap-2 animate-pulse transition-colors shadow-lg font-bold text-white ${callStatus === 'success' ? 'bg-green-600' : 'bg-[#ff5f00]'}`}>
+                            {callStatus === 'idle' && <><Phone size={16} /> Requesting Call...</>}
+                            {callStatus === 'calling' && <><PhoneOutgoing size={16} /> Dialing You...</>}
+                            {callStatus === 'success' && <><Phone size={16} /> Phone Ringing!</>}
+                            {callStatus === 'failed' && <><AlertCircle size={16} /> Call Failed</>}
                         </div>
                     )}
                 </div>
 
-                {/* Main Stage - ADDED min-h-0 here */}
+                {/* Main Stage */}
                 <div className="flex-1 relative bg-black min-h-0 flex flex-col justify-center overflow-hidden">
                     <video
                         ref={videoRef}
                         autoPlay
                         playsInline
                         onPlaying={() => setIsVideoReady(true)}
-                        // Changed object-cover to object-contain if you want to see the whole agent, 
-                        // or keep object-cover but ensure the container handles the crop.
                         className={`w-full h-full object-cover transition-opacity duration-1000 ${status === 'connected' && isVideoReady ? 'opacity-100' : 'opacity-0'}`}
                     />
 
-                    {/* UI Overlay */}
                     {sessionData && <CarDisplay state={flowState} data={sessionData} />}
 
-                    {/* Loader */}
+                    {/* Loader - Shows if not connected OR if connected but video not ready */}
                     {(!status || status !== 'connected' || !isVideoReady) && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 z-20">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#191919] z-20">
                             {error ? (
                                 <div className="text-red-400 flex gap-2"><AlertCircle /> {error}</div>
                             ) : (
                                 <div className="text-center">
-                                    <Loader2 className="w-10 h-10 animate-spin text-orange-500 mx-auto mb-4" />
-                                    <p className="text-gray-400">Finding your car...</p>
+                                    <Loader2 className="w-10 h-10 animate-spin text-[#ff5f00] mx-auto mb-4" />
+                                    <p className="text-gray-400 font-bold">Connecting Agent...</p>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
 
-                {/* Controls - ADDED shrink-0 and z-20 */}
-                <div className="h-24 bg-gray-900 border-t border-gray-800 flex items-center justify-between px-8 shrink-0 z-20 relative">
+                {/* Controls */}
+                <div className="h-24 bg-[#191919] border-t border-gray-800 flex items-center justify-between px-8 shrink-0 z-20 relative">
                     <p className="text-gray-400 italic max-w-lg truncate text-sm">
                         {isProcessing ? "Thinking..." : transcript || "Listening..."}
                     </p>
@@ -257,9 +326,9 @@ const WhisperDIDAgent: React.FC<AgentProps> = ({ bookingContext, onBack }) => {
                             <button
                                 onClick={toggleRecording}
                                 disabled={!isVideoReady || isProcessing}
-                                className={`h-14 w-14 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-orange-500 scale-110 shadow-lg shadow-orange-500/50' : 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'}`}
+                                className={`h-14 w-14 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-[#ff5f00] scale-110 shadow-lg shadow-orange-500/50' : 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'}`}
                             >
-                                {isRecording ? <MicOff /> : <Mic />}
+                                {isRecording ? <Square size={20} fill="white" /> : <Mic />}
                             </button>
                         )}
                         <button onClick={disconnect} className="h-14 w-14 rounded-full bg-gray-800 hover:bg-red-900 text-gray-400 hover:text-red-200 border border-gray-700 flex items-center justify-center">

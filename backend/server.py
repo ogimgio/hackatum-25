@@ -1,23 +1,28 @@
 from fastapi import FastAPI
-from typing import Literal, Optional
-from uuid import uuid4
 import random
-from utils import fetch_simplified_data # <-- get all the data from the provided SIXT APIs
-from schemas import BookingRequest  # <-- import the Pydantic models
+from utils import fetch_simplified_data
+from schemas import BookingRequest
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI(title="SiXT Hackathon API")
 
-# ------------------------------
-# In-memory vehicles / protections
-# ------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Fetch once on startup
-vehicles, addons, protections = fetch_simplified_data()
+vehicles, _, protections = fetch_simplified_data()
 
 # ------------------------------
 # Helper functions
 # ------------------------------
 def filter_cars(preferred_name, prefs):
+    """Filters and selects the best matching normal and upsell cars based on preferences."""
     passenger_req = prefs.passengers
     transmission_req = prefs.transmission
     max_price = prefs.budget * 1.3
@@ -61,10 +66,6 @@ def filter_cars(preferred_name, prefs):
         # 4. Nothing valid → fallback to most expensive overall
         return max(cars, key=lambda c: c["total_price"])
 
-    # --------------------------------------
-    # MAIN SELECT
-    # --------------------------------------
-
     # NORMAL CAR — try matching preferred_name first
     preferred_same = [v for v in same_cats if v["vehicle_name"] == preferred_name]
     if preferred_same:
@@ -77,19 +78,8 @@ def filter_cars(preferred_name, prefs):
 
     return normal_car, upsell_car
 
-
-def select_cars(preferred_name, budget):
-    # Normal car = same category as preferred if exists
-    normal_car = next((v for v in vehicles if v['vehicle_name'] == preferred_name and v['category'] == 'same'), None)
-    if not normal_car:
-        normal_car = random.choice([v for v in vehicles if v['category'] == 'same'])
-    
-    # Upsell car = recommended_upsell
-    upsell_car = random.choice([v for v in vehicles if v['category'] == 'recommended_upsell'])
-
-    return normal_car, upsell_car
-
 def select_protection(budget):
+    """Selects a protection package based on the user's budget."""
     if budget < 40:
         return protections[2]  # cheap
     elif budget < 70:
@@ -98,16 +88,18 @@ def select_protection(budget):
         return protections[0]  # expensive
 
 def format_car_offer(car):
+    """Formats the car offer for the API response."""
     price_delta = f"+${car['extra_cost']}/day" if car['extra_cost'] > 0 else "Same Price"
     return {
         "id": car['id'],
         "name": car['vehicle_name'],
         "image": car['image'],
         "price_delta": price_delta,
-        "description": f"{car['vehicle_name']} with category {car['category']}"
+        "description": car['description']
     }
 
 def format_protection_offer(prot):
+    """Formats the protection offer for the API response."""
     return {
         "name": prot['name'],
         "price": f"${prot['cost']}/day",

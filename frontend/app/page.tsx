@@ -7,7 +7,6 @@ import { BookingContext, CarOffer } from '@/components/types';
 import { useState } from 'react';
 
 export default function CarRentalApp() {
-  // 1. New State: 'selection'
   const [view, setView] = useState<'booking' | 'selection' | 'agent'>('booking');
   const [bookingData, setBookingData] = useState<BookingContext | null>(null);
 
@@ -20,7 +19,6 @@ export default function CarRentalApp() {
   // Step 2: Car Selected -> Go to Agent
   const handleCarSelect = (car: CarOffer) => {
     if (bookingData) {
-      // Save the selected car into the context so the Agent knows what they picked
       setBookingData({ ...bookingData, selectedCar: car });
       setView('agent');
     }
@@ -43,13 +41,18 @@ export default function CarRentalApp() {
         />
       )}
 
-      {/* View 3: AI Agent */}
-      {view === 'agent' && bookingData && (
+      {/* View 3: AI Agent 
+         CRITICAL FIX: 
+         We render this ALWAYS (even at the start), but keep it hidden using CSS ('hidden' class).
+         This allows the connection to establish in the background while the user is browsing cars.
+      */}
+      <div className={view === 'agent' ? 'block w-full' : 'hidden'}>
         <WhisperDIDAgent
           bookingContext={bookingData}
           onBack={() => setView('selection')}
+          isActive={view === 'agent'} // Tells the agent: "You are now on screen, start talking."
         />
-      )}
+      </div>
     </div>
   );
 }

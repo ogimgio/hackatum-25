@@ -1,5 +1,17 @@
 [
   {
+    "id": "bb728740-95ac-7a86-2025-087de2dd7a66",
+    "vehicle_name": "FORD MUSTANG",
+    "category": "recommended_upsell",
+    "extra_cost": 46.75,
+    "total_price": 93.5,
+    "passengers": 4,
+    "transmission": "Automatic",
+    "is_new": false,
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/5144354/ffffff/18_1.png",
+    "description": "4 passengers, Automatic transmission"
+  },
+  {
     "id": "1a1257a0-e495-43ff-b213-9786338e159b",
     "vehicle_name": "VOLKSWAGEN GOLF",
     "category": "same",
@@ -8,7 +20,8 @@
     "passengers": 5,
     "transmission": "Automatic",
     "is_new": true,
-    "image": "https://vehicle-pictures-prod.orange.sixt.com/143707/9d9d9c/18_1.png"
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/143707/9d9d9c/18_1.png",
+    "description": "5 passengers, Automatic transmission"
   },
   {
     "id": "0bddecb3-202f-4281-8dcb-d41c1fbde6df",
@@ -19,7 +32,8 @@
     "passengers": 5,
     "transmission": "Automatic",
     "is_new": true,
-    "image": "https://vehicle-pictures-prod.orange.sixt.com/143456/ffffff/18_1.png"
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/143456/ffffff/18_1.png",
+    "description": "5 passengers, Automatic transmission"
   },
   {
     "id": "afc8d944-b855-4a80-bace-360c43e08411",
@@ -30,7 +44,8 @@
     "passengers": 5,
     "transmission": "Automatic",
     "is_new": true,
-    "image": "https://vehicle-pictures-prod.orange.sixt.com/142547/ffffff/18_1.png"
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/142547/ffffff/18_1.png",
+    "description": "5 passengers, Automatic transmission"
   },
   {
     "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
@@ -41,7 +56,8 @@
     "passengers": 5,
     "transmission": "Automatic",
     "is_new": false,
-    "image": "https://vehicle-pictures-prod.orange.sixt.com/143056/9d9d9c/18_1.png"
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/143056/9d9d9c/18_1.png",
+    "description": "5 passengers, Automatic transmission"
   },
   {
     "id": "580f3653-c314-49a3-b0fb-9de84498edcf",
@@ -52,6 +68,7 @@
     "passengers": 5,
     "transmission": "Automatic",
     "is_new": false,
-    "image": "https://vehicle-pictures-prod.orange.sixt.com/143210/1e1e1e/18_1.png"
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/143210/1e1e1e/18_1.png",
+    "description": "5 passengers, Automatic transmission"
   }
 ]

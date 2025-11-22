@@ -12,7 +12,7 @@ export const CarDisplay = ({ state, data }: { state: FlowState, data: BackendSes
                 <h3 className="font-bold text-lg text-slate-900">{car.name}</h3>
                 <p className="text-sm text-slate-500 mb-2">{car.description}</p>
                 <div className="inline-block px-3 py-1 bg-blue-100 text-blue-700 font-bold rounded-lg text-sm">
-                    {car.price_delta}
+                    {car.price_display}
                 </div>
             </div>
         );

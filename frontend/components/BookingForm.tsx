@@ -154,7 +154,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ onSubmit }) => {
 
                         {/* Budget */}
                         <div>
-                            <label className={labelStyle}><DollarSign size={10} className={sixtOrange} /> Max Budget (USD)</label>
+                            <label className={labelStyle}><DollarSign size={10} className={sixtOrange} /> Max Budget per Day (USD) </label>
                             <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">$</span>
                                 <input type="number" value={budget} onChange={e => setBudget(Number(e.target.value))} className={`${inputStyle} pl-6`} placeholder="e.g. 50" />
