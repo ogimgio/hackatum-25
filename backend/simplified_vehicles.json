@@ -1,0 +1,57 @@
+[
+  {
+    "id": "1a1257a0-e495-43ff-b213-9786338e159b",
+    "vehicle_name": "VOLKSWAGEN GOLF",
+    "category": "same",
+    "extra_cost": 0,
+    "total_price": 0,
+    "passengers": 5,
+    "transmission": "Automatic",
+    "is_new": true,
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/143707/9d9d9c/18_1.png"
+  },
+  {
+    "id": "0bddecb3-202f-4281-8dcb-d41c1fbde6df",
+    "vehicle_name": "VOLKSWAGEN T-CROSS",
+    "category": "same",
+    "extra_cost": 0,
+    "total_price": 0,
+    "passengers": 5,
+    "transmission": "Automatic",
+    "is_new": true,
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/143456/ffffff/18_1.png"
+  },
+  {
+    "id": "afc8d944-b855-4a80-bace-360c43e08411",
+    "vehicle_name": "SKODA ENYAQ",
+    "category": "recommended_upsell",
+    "extra_cost": 9.45,
+    "total_price": 47.25,
+    "passengers": 5,
+    "transmission": "Automatic",
+    "is_new": true,
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/142547/ffffff/18_1.png"
+  },
+  {
+    "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
+    "vehicle_name": "OPEL ASTRA",
+    "category": "recommended_upsell",
+    "extra_cost": 9.62,
+    "total_price": 48.099999999999994,
+    "passengers": 5,
+    "transmission": "Automatic",
+    "is_new": false,
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/143056/9d9d9c/18_1.png"
+  },
+  {
+    "id": "580f3653-c314-49a3-b0fb-9de84498edcf",
+    "vehicle_name": "PEUGEOT 408",
+    "category": "recommended_upsell",
+    "extra_cost": 12.17,
+    "total_price": 60.85,
+    "passengers": 5,
+    "transmission": "Automatic",
+    "is_new": false,
+    "image": "https://vehicle-pictures-prod.orange.sixt.com/143210/1e1e1e/18_1.png"
+  }
+]

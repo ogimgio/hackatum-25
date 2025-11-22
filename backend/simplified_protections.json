@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Peace of Mind",
+    "summary": "Enjoy the peace of mind of knowing you're protected from high costs in case your vehicle is stolen or damaged. With liability insurance, you are protected against claims from third parties up to a limit of USD 300,000 per accident. Safeguard your personal items and those of your accompanying family members from damage or loss. Both the driver and passengers of the rental vehicle are entitled to financial compensation for accident-related medical costs. In the case of self-caused errors that prevent further travel, SIXT will assist you getting on the road again (flat tire, empty tank or battery, lost or locked-in key).",
+    "cost": 69.32
+  },
+  {
+    "name": "Cover The Car & Liability",
+    "summary": "Enjoy the peace of mind of knowing you're protected from high costs in case your vehicle is stolen or damaged. With liability insurance, you are protected against claims from third parties up to a limit of USD 300,000 per accident.",
+    "cost": 48.03
+  },
+  {
+    "name": "Cover The Car",
+    "summary": "Enjoy the peace of mind of knowing you're protected from high costs in case your vehicle is stolen or damaged.",
+    "cost": 31.85
+  },
+  {
+    "name": "I don\u2019t need protection",
+    "summary": "",
+    "cost": 0
+  }
+]
