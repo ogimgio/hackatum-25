@@ -27,6 +27,8 @@ The avatar adapts its wording and sales pitch depending on who the customer is a
 * A budget‑sensitive customer may be convinced by highlighting the high costs of potential accidents.
 * A wealthy customer may respond better to premium convenience (e.g., fast vehicle replacement on vacation).
 
+Additionally it performs speech emotion recognition to adapt its tone and approach based on the customer's emotional state. 
+
 ---
 
 ## System Workflow
@@ -71,6 +73,10 @@ The Python backend is a lightweight API that handles all business logic and data
 - **`server.py`**: The main FastAPI application.
     - **Data Filtering**: Contains the core logic (`filter_cars` and `select_protection`) to determine the best **upsell car option** and the most suitable **protection package** based on the customer's budget and preferences.
     - **API Endpoint**: The `/api/booking/offer` endpoint takes the comprehensive `BookingRequest` and returns the two best car offers (upsell and normal) and the tailored protection package. This information is used by the frontend agent to form the personalized sales pitch.
+
+- **èmotion_analysis**: A module dedicated to **speech emotion recognition**.
+    - It uses a pre-trained audio classification model to analyze the emotional tone of the customer's speech.
+    - This emotional insight is then used to adapt the avatar's responses and tone during the interaction.
 
 ## Key‑Collection Day Flow (Avatar Interaction)
 
